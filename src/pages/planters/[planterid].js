@@ -88,6 +88,11 @@ export default function Planter(props) {
 
   const { classes } = useStyles();
 
+  // try to find first tree image or default image return
+  const backgroundPic =
+    planter?.featuredTrees?.trees?.[0]?.image_url ||
+    `${router.basePath}${planterBackground}`;
+
   useEffect(() => {
     setTitlesData({
       firstName: planter.first_name,
@@ -168,7 +173,7 @@ export default function Planter(props) {
             },
           }}
         >
-          <img src={`${router.basePath}${planterBackground}`} alt="profile" />
+          <img src={backgroundPic} alt="profile" />
           <Avatar
             src={planter.image_url}
             sx={{
@@ -301,9 +306,15 @@ export default function Planter(props) {
               px: [0, 6],
             }}
           >
-            <Box sx={{ mt: [0, 22] }}>
-              <CustomWorldMap totalTrees={treeCount} con="af" />
-            </Box>
+            {planter.continent_name && (
+              <Box sx={{ mt: [0, 22] }}>
+                <CustomWorldMap
+                  totalTrees={treeCount}
+                  con={planter.continent_name}
+                />
+              </Box>
+            )}
+
             <Typography
               variant="h4"
               sx={{
@@ -331,7 +342,6 @@ export default function Planter(props) {
                 subTitle="Adansonia"
                 count={10}
               />
-              <Box sx={{ mt: [2, 4] }} />
               <TreeSpeciesCard
                 name="Wattle Tree"
                 subTitle="Acacia sensu lato"
@@ -415,11 +425,22 @@ export default function Planter(props) {
   );
 }
 
-export async function getServerSideProps({ params }) {
+export async function getStaticProps({ params }) {
   const id = params.planterid;
   const planter = await getPlanterById(id);
   const data = await getOrgLinks(planter.links);
   return {
-    props: { planter: { ...planter, ...data } },
+    props: {
+      planter: { ...planter, ...data },
+    },
+    revalidate: Number(process.env.NEXT_CACHE_REVALIDATION_OVERRIDE) || 30,
+  };
+}
+
+// eslint-disable-next-line require-await
+export async function getStaticPaths() {
+  return {
+    paths: [],
+    fallback: 'blocking',
   };
 }

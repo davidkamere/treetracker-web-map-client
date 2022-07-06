@@ -4,11 +4,12 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LanguageIcon from '@mui/icons-material/Language';
 import NavigationOutlinedIcon from '@mui/icons-material/NavigationOutlined';
 import RoomOutlinedIcon from '@mui/icons-material/RoomOutlined';
-import { useMediaQuery, useTheme, SvgIcon } from '@mui/material';
+import { useMediaQuery, useTheme, SvgIcon, Avatar } from '@mui/material';
 import Box from '@mui/material/Box';
 import Portal from '@mui/material/Portal';
 import Typography from '@mui/material/Typography';
 import log from 'loglevel';
+import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import CustomImageWrapper from 'components/common/CustomImageWrapper';
 import { useDrawerContext } from 'context/DrawerContext';
@@ -17,6 +18,7 @@ import { makeStyles } from 'models/makeStyles';
 import InformationCard1 from '../../components/InformationCard1';
 import LikeButton from '../../components/LikeButton';
 import Share from '../../components/Share';
+import TreeInfoDialog from '../../components/TreeInfoDialog';
 import VerifiedBadge from '../../components/VerifiedBadge';
 import BackButton from '../../components/common/BackButton';
 import TreeTag from '../../components/common/TreeTag';
@@ -27,7 +29,6 @@ import historyIcon from '../../images/icons/history.svg';
 import location from '../../images/icons/location.svg';
 import shareIcon from '../../images/icons/share.svg';
 import tokenIcon from '../../images/icons/token.svg';
-import maxIcon from '../../images/max.svg';
 import searchIcon from '../../images/search.svg';
 import { useMapContext } from '../../mapContext';
 
@@ -68,6 +69,8 @@ export default function Tree({
   const mapContext = useMapContext();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const router = useRouter();
+  const userCameFromPlanterPage = router.asPath.includes('planters');
 
   const { setTitlesData } = useDrawerContext();
 
@@ -167,21 +170,38 @@ export default function Tree({
           </Box>
         </Portal>
       )}
-      {!isMobile && (
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            width: '100%',
-            alignItems: 'center',
-          }}
-        >
-          <BackButton />
-          <Box>
-            {}
-            <img src={searchIcon} alt="search" />
+      {!isMobile && userCameFromPlanterPage && (
+        <>
+          <Box
+            sx={{
+              display: 'flex',
+              width: '100%',
+              alignItems: 'center',
+            }}
+          >
+            <Avatar className={classes.media} src={planter.image_url} />
+            <Box sx={{ marginLeft: 3 }}>
+              <Typography variant="h5">
+                {planter.first_name} {planter.last_name}
+              </Typography>
+            </Box>
           </Box>
-        </Box>
+
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              width: '100%',
+              alignItems: 'center',
+            }}
+          >
+            <BackButton />
+            <Box>
+              {}
+              <img src={searchIcon} alt="search" />
+            </Box>
+          </Box>
+        </>
       )}
       <Box
         sx={[
@@ -241,18 +261,11 @@ export default function Tree({
                 </Box>
               }
             />
-            <Box
-              onClick={() => handleMax(tree.image_url)}
-              sx={{
-                cursor: 'pointer',
-                '& img': {
-                  width: [40, 52],
-                  height: [40, 52],
-                },
-              }}
-            >
-              <img alt="fullscreen" src={maxIcon} />
-            </Box>
+            <TreeInfoDialog
+              tree={tree}
+              planter={planter}
+              organization={organization}
+            />
           </Box>
         </Box>
         <img src={tree.image_url} alt="tree" />
@@ -402,7 +415,7 @@ export default function Tree({
   );
 }
 
-export async function getServerSideProps({ params }) {
+export async function getStaticProps({ params }) {
   const { treeid } = params;
   const tree = await getTreeById(treeid);
   const { planter_id, planting_organization_id } = tree;
@@ -418,5 +431,14 @@ export async function getServerSideProps({ params }) {
       planter,
       organization,
     },
+    revalidate: Number(process.env.NEXT_CACHE_REVALIDATION_OVERRIDE) || 180,
+  };
+}
+
+// eslint-disable-next-line require-await
+export async function getStaticPaths() {
+  return {
+    paths: [],
+    fallback: 'blocking',
   };
 }
